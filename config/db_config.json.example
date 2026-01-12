@@ -1,0 +1,9 @@
+{
+  "host": "localhost",
+  "port": 1521,
+  "user": "your_username",
+  "password": "your_password",
+  "service_name": "FREEPDB1",
+  "wallet_location": "/path/to/wallet",
+  "wallet_password": "your_wallet_password"
+}

@@ -1,0 +1,21 @@
+# Oracle Test Library Requirements
+
+# Core Oracle database driver
+oracledb>=2.0.0
+
+# For data generation and testing
+faker>=20.0.0
+
+# For advanced statistics
+numpy>=1.24.0
+scipy>=1.10.0
+
+# For result visualization (optional)
+matplotlib>=3.7.0
+pandas>=2.0.0
+
+# For JSON schema validation (optional)
+jsonschema>=4.17.0
+
+# For progress bars (optional)
+tqdm>=4.65.0

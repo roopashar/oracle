@@ -1,0 +1,60 @@
+# Database configuration (contains sensitive credentials)
+db_config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Wallet files (contain sensitive keys)
+wallet/
+*.sso
+*.p12
+
+# Docker setup artifacts
+docker-tls-setup/
+docker-tls-simple/
+scripts/docker-tls-setup/
+scripts/docker-tls-simple/
+
+# Log files
+*.log
