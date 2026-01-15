@@ -1,0 +1,13 @@
+{
+  "host": "database.example.com",
+  "port": 1521,
+  "user": "admin",
+  "password": "your_password",
+  "service_name": "ORCL",
+  "wallet_location": "/path/to/wallet",
+  "wallet_password": "WalletPassword",
+  "use_thick_mode": false,
+  "thick_mode_lib_dir": "/usr/local/lib",
+  "_comment_use_thick_mode": "Set to true to use Oracle thick client mode (requires Oracle Instant Client)",
+  "_comment_thick_mode_lib_dir": "Path to Oracle Instant Client: /usr/local/lib (macOS DMG), /usr/local/oracle/instantclient_19_8 (macOS ZIP), /opt/oracle/instantclient_19_19 (Linux)"
+}

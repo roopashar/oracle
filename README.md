@@ -248,11 +248,13 @@ pytest tests/test_oracle_lib.py -v
 | [QUICKSTART.md](docs/QUICKSTART.md) | Quick start guide and basic examples |
 | [INSTALLATION.md](docs/INSTALLATION.md) | Installation instructions for all platforms |
 | [DB_CONFIG_SETUP.md](docs/DB_CONFIG_SETUP.md) | Database configuration guide |
+| [THICK_CLIENT_MODE.md](THICK_CLIENT_MODE.md) | Oracle thick client mode - full documentation |
+| [THICK_MODE_SUMMARY.md](THICK_MODE_SUMMARY.md) | Quick reference for thick client mode |
 | [LOADPROFILE_REFERENCE.md](docs/LOADPROFILE_REFERENCE.md) | LoadProfile parameters and usage guide |
 | [COMPREHENSIVE_TESTING.md](docs/COMPREHENSIVE_TESTING.md) | Comprehensive query testing guide |
 | [TEST_RESULTS_OUTPUT.md](TEST_RESULTS_OUTPUT.md) | Test results output format and examples |
 | [SEPARATE_READ_WRITE_METRICS.md](SEPARATE_READ_WRITE_METRICS.md) | Separate read/write metrics feature guide |
-| [LOAD_PROFILE_COMPARISON.md](docs/LOAD_PROFILE_COMPARISON.md) | Load profile comparison (original vs cloud-optimized) |
+| [LOAD_PROFILE_COMPARISON.md](LOAD_PROFILE_COMPARISON.md) | Load profile comparison (original vs cloud-optimized) |
 | [DOCKER_TLS_SETUP.md](docs/DOCKER_TLS_SETUP.md) | Docker TLS/SSL setup guide |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture and design patterns |
 | [PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md) | Complete project overview |
@@ -263,6 +265,7 @@ pytest tests/test_oracle_lib.py -v
 |--------|-------------|
 | [examples.py](examples/examples.py) | Basic usage examples for all features |
 | [example_comprehensive_test.py](examples/example_comprehensive_test.py) | Comprehensive query testing with bulk data |
+| [example_thick_mode.py](examples/example_thick_mode.py) | Thick client mode examples and performance comparison |
 
 ## Utility Scripts
 

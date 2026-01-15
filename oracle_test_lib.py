@@ -3,10 +3,11 @@ Oracle Client Testing Library
 
 A comprehensive testing library for Oracle database clients with support for:
 - Large write operations
-- Large read operations  
+- Large read operations
 - Multiple concurrent TLS connections
 - Configurable low/high load patterns
 - Performance metrics and monitoring
+- Thick client mode with Oracle Instant Client
 """
 
 import oracledb
@@ -21,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import statistics
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -28,6 +30,50 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Global flag to track if thick mode has been initialized
+_thick_mode_initialized = False
+
+
+def init_thick_mode(lib_dir: Optional[str] = None) -> bool:
+    """
+    Initialize Oracle thick client mode.
+
+    IMPORTANT: This must be called BEFORE creating any Oracle connections.
+    Once a thin mode connection is created, thick mode cannot be enabled.
+
+    Args:
+        lib_dir: Optional path to Oracle Instant Client directory
+
+    Returns:
+        True if thick mode was successfully initialized, False otherwise
+
+    Example:
+        >>> from oracle_test_lib import init_thick_mode
+        >>> init_thick_mode('/usr/local/lib')  # Call before creating any clients
+        >>> # Now create clients with use_thick_mode=True
+    """
+    global _thick_mode_initialized
+
+    if _thick_mode_initialized:
+        logger.info("Thick mode already initialized")
+        return True
+
+    try:
+        if lib_dir:
+            logger.info(f"Initializing thick mode with lib_dir: {lib_dir}")
+            oracledb.init_oracle_client(lib_dir=lib_dir)
+        else:
+            logger.info("Initializing thick mode with default Oracle Client location")
+            oracledb.init_oracle_client()
+
+        _thick_mode_initialized = True
+        logger.info("Thick mode initialized successfully")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to initialize thick mode: {e}")
+        return False
 
 
 @dataclass
@@ -195,17 +241,44 @@ class TestResults:
 
 class OracleTestConnection:
     """Represents a single Oracle database connection for testing"""
-    
-    def __init__(self, connection_id: str, config: Dict[str, Any], use_tls: bool = True):
+
+    def __init__(self, connection_id: str, config: Dict[str, Any], use_tls: bool = True, use_thick_mode: bool = False):
         self.connection_id = connection_id
         self.config = config
         self.use_tls = use_tls
+        self.use_thick_mode = use_thick_mode
         self.connection: Optional[oracledb.Connection] = None
         self.cursor: Optional[oracledb.Cursor] = None
         
     def connect(self) -> bool:
         """Establish connection to Oracle database"""
         try:
+            # Initialize thick mode if requested (only needs to be done once globally)
+            if self.use_thick_mode:
+                global _thick_mode_initialized
+                if not _thick_mode_initialized:
+                    try:
+                        # Get lib_dir from config or use default
+                        lib_dir = self.config.get('thick_mode_lib_dir')
+                        if lib_dir:
+                            logger.info(f"Initializing thick mode with lib_dir: {lib_dir}")
+                            oracledb.init_oracle_client(lib_dir=lib_dir)
+                        else:
+                            logger.info("Initializing thick mode with default Oracle Client location")
+                            oracledb.init_oracle_client()
+                        _thick_mode_initialized = True
+                        logger.info("Thick mode initialized successfully")
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "DPY-2019" in error_msg or "thin mode has already been enabled" in error_msg:
+                            logger.warning("Failed to initialize thick mode: Thin mode already in use")
+                            logger.warning("IMPORTANT: Thick mode must be initialized BEFORE any connections are created")
+                            logger.warning("Solution: Call init_thick_mode() at the start of your script, before creating any clients")
+                        else:
+                            logger.warning(f"Failed to initialize thick mode: {e}")
+                        logger.warning("Falling back to thin mode")
+                        self.use_thick_mode = False
+
             # Configure TLS if requested
             if self.use_tls:
                 # Set up TLS parameters
@@ -214,7 +287,7 @@ class OracleTestConnection:
                     self.config['port'],
                     service_name=self.config.get('service_name', 'ORCLPDB1')
                 )
-                
+
                 self.connection = oracledb.connect(
                     user=self.config['user'],
                     password=self.config['password'],
@@ -232,11 +305,12 @@ class OracleTestConnection:
                     port=self.config['port'],
                     service_name=self.config.get('service_name', 'ORCLPDB1')
                 )
-            
+
             self.cursor = self.connection.cursor()
-            logger.info(f"Connection {self.connection_id} established")
+            mode = "thick" if self.use_thick_mode and _thick_mode_initialized else "thin"
+            logger.info(f"Connection {self.connection_id} established ({mode} mode)")
             return True
-            
+
         except Exception as e:
             logger.error(f"Connection {self.connection_id} failed: {str(e)}")
             return False
@@ -269,22 +343,25 @@ class OracleTestClient:
         load_profile: LoadProfile,
         use_tls: bool = True,
         setup_tables: bool = True,
-        use_prepared_statements: bool = True
+        use_prepared_statements: bool = True,
+        use_thick_mode: bool = False
     ):
         """
         Initialize Oracle test client
-        
+
         Args:
             db_config: Database connection configuration
             load_profile: Load profile for testing
             use_tls: Whether to use TLS connections
             setup_tables: Whether to automatically create test tables
             use_prepared_statements: Whether to use prepared statements (recommended)
+            use_thick_mode: Whether to use Oracle thick client mode (requires Oracle Instant Client)
         """
         self.db_config = db_config
         self.load_profile = load_profile
         self.use_tls = use_tls
         self.use_prepared_statements = use_prepared_statements
+        self.use_thick_mode = use_thick_mode
         self.results = TestResults(load_profile=load_profile)
         self._stop_flag = threading.Event()
         
@@ -346,7 +423,8 @@ class OracleTestClient:
         Returns:
             Tuple of (success: bool, message: str)
         """
-        conn = OracleTestConnection("connection_test", db_config, use_tls)
+        use_thick_mode = db_config.get('use_thick_mode', False)
+        conn = OracleTestConnection("connection_test", db_config, use_tls, use_thick_mode)
         try:
             if conn.connect():
                 # Try a simple query
@@ -487,7 +565,7 @@ class OracleTestClient:
         """Create necessary test tables"""
         conn = None
         try:
-            conn = OracleTestConnection("setup", self.db_config, self.use_tls)
+            conn = OracleTestConnection("setup", self.db_config, self.use_tls, self.use_thick_mode)
             if not conn.connect():
                 error_msg = "Failed to establish setup connection. Please check:\n"
                 error_msg += "  1. Database host and port are correct\n"
@@ -621,7 +699,7 @@ class OracleTestClient:
         """
         should_close = False
         if connection is None:
-            connection = OracleTestConnection("populate", self.db_config, self.use_tls)
+            connection = OracleTestConnection("populate", self.db_config, self.use_tls, self.use_thick_mode)
             if not connection.connect():
                 raise RuntimeError("Failed to establish connection for data population")
             should_close = True
@@ -1087,7 +1165,7 @@ class OracleTestClient:
         self.use_prepared_statements = True
         self.results = TestResults(load_profile=self.load_profile)
         
-        conn = OracleTestConnection("prepared_test", self.db_config, self.use_tls)
+        conn = OracleTestConnection("prepared_test", self.db_config, self.use_tls, self.use_thick_mode)
         if conn.connect():
             try:
                 for i in range(num_operations):
@@ -1095,15 +1173,15 @@ class OracleTestClient:
                     self.results.add_metric(metric)
             finally:
                 conn.disconnect()
-        
+
         results['prepared'] = self.results
-        
+
         # Test without prepared statements
         logger.info("Testing WITHOUT prepared statements...")
         self.use_prepared_statements = False
         self.results = TestResults(load_profile=self.load_profile)
-        
-        conn = OracleTestConnection("direct_test", self.db_config, self.use_tls)
+
+        conn = OracleTestConnection("direct_test", self.db_config, self.use_tls, self.use_thick_mode)
         if conn.connect():
             try:
                 for i in range(num_operations):
@@ -1143,7 +1221,8 @@ class OracleTestClient:
             conn = OracleTestConnection(
                 f"conn_{connection_id}",
                 self.db_config,
-                self.use_tls
+                self.use_tls,
+                self.use_thick_mode
             )
             
             if not conn.connect():
